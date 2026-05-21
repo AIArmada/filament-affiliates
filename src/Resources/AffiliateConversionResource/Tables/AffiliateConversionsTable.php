@@ -10,14 +10,17 @@ use AIArmada\Affiliates\States\ConversionStatus;
 use AIArmada\Affiliates\States\PaidConversion;
 use AIArmada\Affiliates\States\PendingConversion;
 use AIArmada\Affiliates\States\RejectedConversion;
+use AIArmada\CommerceSupport\Support\MoneyFormatter;
 use AIArmada\FilamentAffiliates\Resources\AffiliateConversionResource;
 use AIArmada\FilamentAffiliates\Support\Integrations\CartBridge;
 use AIArmada\FilamentAffiliates\Support\Integrations\VoucherBridge;
+use AIArmada\FilamentAffiliates\Support\OwnerScopedQuery;
 use Filament\Actions\Action;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Gate;
 
 final class AffiliateConversionsTable
 {
@@ -38,11 +41,7 @@ final class AffiliateConversionsTable
 
                 TextColumn::make('commission_minor')
                     ->label('Commission')
-                    ->formatStateUsing(fn (AffiliateConversion $record): string => sprintf(
-                        '%s %.2f',
-                        $record->commission_currency,
-                        $record->commission_minor / 100
-                    ))
+                    ->formatStateUsing(fn (AffiliateConversion $record): string => MoneyFormatter::formatMinor($record->commission_minor, $record->commission_currency))
                     ->badge()
                     ->color('success')
                     ->sortable(),
@@ -126,13 +125,19 @@ final class AffiliateConversionsTable
 
     public static function updateStatus(AffiliateConversion $record, ConversionStatus | string $status): bool
     {
-        $statusClass = ConversionStatus::resolveStateClassFor($status, $record);
+        Gate::authorize('update', $record);
 
-        $record->status = new $statusClass($record);
-        $record->approved_at = in_array($statusClass, [ApprovedConversion::class, PaidConversion::class], true)
-            ? ($record->approved_at ?? now())
+        $conversion = OwnerScopedQuery::throughAffiliate(AffiliateConversion::query())
+            ->whereKey($record->getKey())
+            ->firstOrFail();
+
+        $statusClass = ConversionStatus::resolveStateClassFor($status, $conversion);
+
+        $conversion->status = new $statusClass($conversion);
+        $conversion->approved_at = in_array($statusClass, [ApprovedConversion::class, PaidConversion::class], true)
+            ? ($conversion->approved_at ?? now())
             : null;
 
-        return $record->save();
+        return $conversion->save();
     }
 }

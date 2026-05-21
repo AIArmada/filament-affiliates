@@ -8,12 +8,13 @@ use AIArmada\Affiliates\Enums\FraudSeverity;
 use AIArmada\Affiliates\Enums\FraudSignalStatus;
 use AIArmada\Affiliates\Models\AffiliateFraudSignal;
 use AIArmada\Affiliates\States\RejectedConversion;
+use AIArmada\CommerceSupport\Support\FilamentPermission;
+use AIArmada\FilamentAffiliates\Actions\BulkFraudReviewAction;
 use AIArmada\FilamentAffiliates\Support\OwnerScopedQuery;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\ViewAction;
-use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -32,11 +33,27 @@ final class FraudReviewPage extends Page implements HasForms, HasTable
 
     protected static string | BackedEnum | null $navigationIcon = 'heroicon-o-shield-exclamation';
 
-    protected static string | UnitEnum | null $navigationGroup = 'Affiliates';
-
     protected static ?string $navigationLabel = 'Fraud Review';
 
-    protected static ?int $navigationSort = 15;
+    public static function getNavigationGroup(): string | UnitEnum | null
+    {
+        return config('filament-affiliates.navigation_group');
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        return config('filament-affiliates.pages.navigation_sort.fraud_review', 15);
+    }
+
+    public static function canAccess(): bool
+    {
+        return FilamentPermission::hasAnyAbility(['affiliate.approve', 'affiliates.fraud.update']);
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::canAccess();
+    }
 
     /** @var view-string */
     protected string $view = 'filament-affiliates::pages.fraud-review';
@@ -110,7 +127,7 @@ final class FraudReviewPage extends Page implements HasForms, HasTable
                     ->icon('heroicon-o-check')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->authorize(fn (): bool => (Filament::auth()->user() ?? auth()->user())?->can('affiliates.fraud.update') ?? false)
+                    ->authorize(fn (): bool => FilamentPermission::hasAnyAbility(['affiliate.approve', 'affiliates.fraud.update']))
                     ->action(function (AffiliateFraudSignal $record): void {
                         Gate::authorize('update', $record);
 
@@ -132,7 +149,7 @@ final class FraudReviewPage extends Page implements HasForms, HasTable
                     ->icon('heroicon-o-x-mark')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->authorize(fn (): bool => (Filament::auth()->user() ?? auth()->user())?->can('affiliates.fraud.update') ?? false)
+                    ->authorize(fn (): bool => FilamentPermission::hasAnyAbility(['affiliate.approve', 'affiliates.fraud.update']))
                     ->form([
                         Forms\Components\Textarea::make('notes')
                             ->label('Review Notes')
@@ -169,7 +186,7 @@ final class FraudReviewPage extends Page implements HasForms, HasTable
                     ->icon('heroicon-o-check')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->authorize(fn (): bool => (Filament::auth()->user() ?? auth()->user())?->can('affiliates.fraud.update') ?? false)
+                    ->authorize(fn (): bool => FilamentPermission::hasAnyAbility(['affiliate.approve', 'affiliates.fraud.update']))
                     ->action(function ($records): void {
                         $reviewedBy = auth()->user()?->getAuthIdentifier();
 
@@ -193,7 +210,7 @@ final class FraudReviewPage extends Page implements HasForms, HasTable
                     ->icon('heroicon-o-x-mark')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->authorize(fn (): bool => (Filament::auth()->user() ?? auth()->user())?->can('affiliates.fraud.update') ?? false)
+                    ->authorize(fn (): bool => FilamentPermission::hasAnyAbility(['affiliate.approve', 'affiliates.fraud.update']))
                     ->action(function ($records): void {
                         $reviewedBy = auth()->user()?->getAuthIdentifier();
 
@@ -215,6 +232,9 @@ final class FraudReviewPage extends Page implements HasForms, HasTable
                             }
                         });
                     }),
+
+                BulkFraudReviewAction::make('bulk_fraud_review')
+                    ->authorize(fn (): bool => FilamentPermission::hasAnyAbility(['affiliate.approve', 'affiliates.fraud.update'])),
             ]);
     }
 

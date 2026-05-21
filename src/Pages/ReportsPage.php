@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AIArmada\FilamentAffiliates\Pages;
 
 use AIArmada\Affiliates\Services\AffiliateReportService;
+use AIArmada\CommerceSupport\Support\FilamentPermission;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -29,11 +30,27 @@ final class ReportsPage extends Page implements HasForms
 
     protected static string | BackedEnum | null $navigationIcon = 'heroicon-o-chart-bar';
 
-    protected static string | UnitEnum | null $navigationGroup = 'Affiliates';
-
     protected static ?string $navigationLabel = 'Reports';
 
-    protected static ?int $navigationSort = 10;
+    public static function getNavigationGroup(): string | UnitEnum | null
+    {
+        return config('filament-affiliates.navigation_group');
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        return config('filament-affiliates.pages.navigation_sort.reports', 10);
+    }
+
+    public static function canAccess(): bool
+    {
+        return FilamentPermission::hasAbility('affiliate.analytics');
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::canAccess();
+    }
 
     /** @var view-string */
     protected string $view = 'filament-affiliates::pages.reports';
