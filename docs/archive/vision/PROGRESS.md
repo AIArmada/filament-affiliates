@@ -1,5 +1,7 @@
 # Filament Affiliates Vision Progress
 
+> **Archived vision document:** this file is retained for historical planning and audit context only. Prefer the current package docs in `packages/filament-affiliates/docs/` for active resource, widget, and page behavior.
+
 > **Package:** `aiarmada/filament-affiliates`  
 > **Last Updated:** January 25, 2025  
 > **Status:** ✅ Complete (Audited & Verified)

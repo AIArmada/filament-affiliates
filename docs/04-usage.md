@@ -1,8 +1,10 @@
 ---
-title: Resources
+title: Usage
 ---
 
-# Resources
+# Usage
+
+This guide covers the shipped resources and the admin workflows they enable.
 
 The plugin provides five Filament resources for managing affiliates.
 
