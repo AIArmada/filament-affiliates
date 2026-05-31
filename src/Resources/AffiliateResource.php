@@ -110,10 +110,10 @@ final class AffiliateResource extends Resource
     {
         return [
             ConversionsRelationManager::class,
+            ProgramsRelationManager::class,
             PayoutsRelationManager::class,
             PayoutMethodsRelationManager::class,
             PayoutHoldsRelationManager::class,
-            ProgramsRelationManager::class,
         ];
     }
 

@@ -53,7 +53,7 @@ final class ProgramsRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
-            ->recordTitleAttribute('program_id')
+            ->recordTitleAttribute('program.name')
             ->columns([
                 TextColumn::make('program.name')
                     ->label('Program')
