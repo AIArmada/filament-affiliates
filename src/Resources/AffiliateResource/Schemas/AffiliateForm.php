@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace AIArmada\FilamentAffiliates\Resources\AffiliateResource\Schemas;
 
 use AIArmada\Affiliates\Enums\CommissionType;
+use AIArmada\Affiliates\Models\Affiliate;
 use AIArmada\Affiliates\States\AffiliateStatus;
 use AIArmada\Affiliates\States\Draft;
 use AIArmada\CommerceSupport\Support\MoneyFormatter;
 use BackedEnum;
+use Closure;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -16,7 +19,9 @@ use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Illuminate\Foundation\Auth\User;
 
 final class AffiliateForm
 {
@@ -32,8 +37,8 @@ final class AffiliateForm
                             ->label('Tracking Code')
                             ->required()
                             ->maxLength(64)
-                            ->rule(fn (mixed $component): \Closure => function (string $attribute, string $value, \Closure $fail) use ($component): void {
-                                $query = \AIArmada\Affiliates\Models\Affiliate::query()
+                            ->rule(fn (mixed $component): Closure => function (string $attribute, string $value, Closure $fail) use ($component): void {
+                                $query = Affiliate::query()
                                     ->whereRaw('LOWER(code) = ?', [mb_strtolower($value)]);
 
                                 if (method_exists($component, 'getRecord') && $record = $component->getRecord()) {
@@ -143,6 +148,52 @@ final class AffiliateForm
                     ]),
                 ])
                 ->collapsed(),
+
+            Section::make('Portal Access')
+                ->description('Link a user to this affiliate for self-service portal access.')
+                ->schema([
+                    Hidden::make('owner_type'),
+                    Hidden::make('owner_id'),
+                    Grid::make(1)->schema([
+                        Select::make('linked_user')
+                            ->label('Linked User')
+                            ->searchable()
+                            ->placeholder('No linked user')
+                            ->helperText('Leave empty for admin-managed affiliates without portal access.')
+                            ->getSearchResultsUsing(function (string $search): array {
+                                $userModel = config('auth.providers.users.model', User::class);
+
+                                return $userModel::where('email', 'like', "%{$search}%")
+                                    ->orWhere('name', 'like', "%{$search}%")
+                                    ->limit(50)
+                                    ->pluck('email', 'id')
+                                    ->toArray();
+                            })
+                            ->getOptionLabelUsing(function ($value): ?string {
+                                $userModel = config('auth.providers.users.model', User::class);
+
+                                return $userModel::find($value)?->email;
+                            })
+                            ->dehydrated(false)
+                            ->afterStateHydrated(function (Select $component): void {
+                                $record = $component->getRecord();
+
+                                if ($record instanceof Affiliate && $record->owner_type === 'user' && $record->owner_id) {
+                                    $component->state($record->owner_id);
+                                }
+                            })
+                            ->afterStateUpdated(function (?string $state, Set $set): void {
+                                if ($state) {
+                                    $set('owner_type', 'user');
+                                    $set('owner_id', $state);
+                                } else {
+                                    $set('owner_type', null);
+                                    $set('owner_id', null);
+                                }
+                            }),
+                    ]),
+                ])
+                ->collapsible(),
 
             Section::make('Metadata')
                 ->schema([
