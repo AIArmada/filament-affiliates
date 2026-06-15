@@ -14,19 +14,19 @@ use AIArmada\FilamentAffiliates\Pages\Portal\PortalProfile;
 use AIArmada\FilamentAffiliates\Pages\Portal\PortalPrograms;
 use AIArmada\FilamentAffiliates\Pages\Portal\PortalRegistration;
 use AIArmada\FilamentAffiliates\Pages\Portal\PortalSupport;
+use AIArmada\FilamentAffiliates\Pages\Portal\PortalVouchers;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Assets\Css;
-use Filament\Support\Facades\FilamentAsset;
-use Illuminate\Support\Facades\Vite;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Vite;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 /**
@@ -121,6 +121,7 @@ class AffiliatePanelProvider extends PanelProvider
                 'payouts' => true,
                 'support_compliance' => true,
                 'creatives' => true,
+                'vouchers' => true,
             ]),
         ];
 
@@ -149,6 +150,12 @@ class AffiliatePanelProvider extends PanelProvider
 
         if ($features['links'] ?? true) {
             $pages[] = PortalLinks::class;
+            if ($features['creatives'] ?? true) {
+                $pages[] = PortalCreatives::class;
+            }
+            if ($features['vouchers'] ?? true) {
+                $pages[] = PortalVouchers::class;
+            }
         }
 
         if ($features['programs'] ?? true) {
@@ -169,10 +176,6 @@ class AffiliatePanelProvider extends PanelProvider
 
         if ($features['support_compliance'] ?? true) {
             $pages[] = PortalSupport::class;
-        }
-
-        if ($features['creatives'] ?? true) {
-            $pages[] = PortalCreatives::class;
         }
 
         return $pages;

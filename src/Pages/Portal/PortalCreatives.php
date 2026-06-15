@@ -17,7 +17,7 @@ class PortalCreatives extends PortalPage
 {
     protected static string | BackedEnum | null $navigationIcon = Heroicon::OutlinedPhoto;
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 2;
 
     /** @var view-string */
     protected string $view = 'filament-affiliates::pages.portal.creatives';
@@ -25,6 +25,11 @@ class PortalCreatives extends PortalPage
     public static function getNavigationLabel(): string
     {
         return __('Creatives');
+    }
+
+    public static function getNavigationParent(): ?string
+    {
+        return PortalLinks::class;
     }
 
     public function getTitle(): string | Htmlable
@@ -93,11 +98,12 @@ class PortalCreatives extends PortalPage
             ->filter(fn (AffiliateProgram $program): bool => $program->getAttribute('pivot')->status === 'approved');
 
         return $programs
-            ->flatMap(fn (AffiliateProgram $program) => $program
-                ->creatives()
-                ->orderByDesc('created_at')
-                ->get()
-                ->each(fn (AffiliateProgramCreative $creative) => $creative->setRelation('program', $program))
+            ->flatMap(
+                fn (AffiliateProgram $program) => $program
+                    ->creatives()
+                    ->orderByDesc('created_at')
+                    ->get()
+                    ->each(fn (AffiliateProgramCreative $creative) => $creative->setRelation('program', $program))
             );
     }
 
