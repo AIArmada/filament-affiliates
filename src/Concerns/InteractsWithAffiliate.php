@@ -136,46 +136,85 @@ trait InteractsWithAffiliate
     }
 
     /**
-     * Get total earnings for the affiliate.
+     * Get total earnings for the affiliate, keyed by currency code.
+     *
+     * @return array<string, int>
      */
-    public function getTotalEarnings(): int
+    public function getTotalEarnings(): array
     {
         $affiliate = $this->getAffiliate();
 
         if (! $affiliate) {
-            return 0;
+            return [];
         }
 
-        return (int) $affiliate->conversions()
-            ->whereIn('status', [ApprovedConversion::value(), PaidConversion::value()])
-            ->sum('commission_minor');
-    }
-
-    public function getAvailableEarnings(): int
-    {
-        $affiliate = $this->getAffiliate();
-
-        if (! $affiliate) {
-            return 0;
-        }
-
-        return (int) ($affiliate->balance?->available_minor ?? 0);
+        return $this->sumConversionsByCurrency(
+            $affiliate,
+            [ApprovedConversion::value(), PaidConversion::value()],
+        );
     }
 
     /**
-     * Get pending earnings for the affiliate.
+     * @return array<string, int>
      */
-    public function getPendingEarnings(): int
+    public function getAvailableEarnings(): array
     {
         $affiliate = $this->getAffiliate();
 
         if (! $affiliate) {
-            return 0;
+            return [];
         }
 
-        return (int) $affiliate->conversions()
-            ->where('status', PendingConversion::value())
-            ->sum('commission_minor');
+        $map = [];
+
+        foreach ($affiliate->balances()->get(['currency', 'available_minor']) as $balance) {
+            $code = mb_strtoupper((string) $balance->currency);
+            $map[$code] = ($map[$code] ?? 0) + (int) $balance->available_minor;
+        }
+
+        ksort($map);
+
+        return $map;
+    }
+
+    /**
+     * Get pending earnings for the affiliate, keyed by currency code.
+     *
+     * @return array<string, int>
+     */
+    public function getPendingEarnings(): array
+    {
+        $affiliate = $this->getAffiliate();
+
+        if (! $affiliate) {
+            return [];
+        }
+
+        return $this->sumConversionsByCurrency($affiliate, [PendingConversion::value()]);
+    }
+
+    /**
+     * @param  array<int, string>  $statuses
+     * @return array<string, int>
+     */
+    private function sumConversionsByCurrency(Affiliate $affiliate, array $statuses): array
+    {
+        $rows = $affiliate->conversions()
+            ->whereIn('status', $statuses)
+            ->selectRaw('commission_currency as ccy, SUM(commission_minor) as total')
+            ->groupBy('commission_currency')
+            ->pluck('total', 'ccy');
+
+        $map = [];
+
+        foreach ($rows as $code => $total) {
+            $key = mb_strtoupper((string) ($code ?: $affiliate->currency ?? config('affiliates.currency.default', 'MYR')));
+            $map[$key] = ($map[$key] ?? 0) + (int) $total;
+        }
+
+        ksort($map);
+
+        return $map;
     }
 
     /**
@@ -256,12 +295,34 @@ trait InteractsWithAffiliate
     public function formatAmount(int $amount, ?string $currency = null): string
     {
         $affiliate = $this->getAffiliate();
-        $currency = $currency ?? $affiliate?->currency ?? config('affiliates.currency.default', 'USD');
+        $currency = $currency ?? $affiliate?->currency ?? config('affiliates.currency.default', 'MYR');
 
         // Determine decimal places based on currency (most use 2, some use 0)
         $zeroDecimalCurrencies = ['JPY', 'KRW', 'VND', 'IDR', 'CLP', 'PYG', 'UGX', 'RWF'];
         $decimals = in_array(mb_strtoupper($currency), $zeroDecimalCurrencies, true) ? 0 : 2;
 
         return mb_strtoupper($currency) . ' ' . MoneyFormatter::decimalFromMinor($amount, $currency, $decimals);
+    }
+
+    /**
+     * Format a per-currency breakdown for display.
+     *
+     * @param  array<string, int>  $amountsByCurrency
+     */
+    public function formatBreakdown(array $amountsByCurrency): string
+    {
+        ksort($amountsByCurrency);
+
+        $parts = [];
+
+        foreach ($amountsByCurrency as $currency => $amount) {
+            if ((int) $amount === 0) {
+                continue;
+            }
+
+            $parts[] = $this->formatAmount((int) $amount, (string) $currency);
+        }
+
+        return $parts === [] ? $this->formatAmount(0) : implode(' · ', $parts);
     }
 }

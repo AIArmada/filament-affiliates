@@ -83,7 +83,7 @@ final class PayoutBatchPage extends Page implements HasForms, HasTable
 
                 Tables\Columns\TextColumn::make('total_minor')
                     ->label('Amount')
-                    ->formatStateUsing(fn ($state, $record): string => MoneyFormatter::formatMinor((int) $state, $record->currency ?? 'USD'))
+                    ->formatStateUsing(fn ($state, $record): string => MoneyFormatter::formatMinor((int) $state, $record->currency ?? 'MYR'))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('payout_method')
@@ -230,7 +230,6 @@ final class PayoutBatchPage extends Page implements HasForms, HasTable
 
         return [
             'pendingCount' => (int) $pendingByCurrency->sum(fn (AffiliatePayout $row): int => (int) $row->getAttribute('count')),
-            'pendingTotal' => (int) $pendingByCurrency->sum(fn (AffiliatePayout $row): int => (int) $row->getAttribute('total')),
             'pendingByCurrency' => $pendingByCurrency,
         ];
     }
