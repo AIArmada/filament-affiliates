@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace AIArmada\FilamentAffiliates;
 
 use AIArmada\FilamentAffiliates\Pages\FraudReviewPage;
+use AIArmada\FilamentAffiliates\Pages\ManageAffiliateBonusSettings;
 use AIArmada\FilamentAffiliates\Pages\ManageAffiliateCommissionSettings;
+use AIArmada\FilamentAffiliates\Pages\ManageAffiliatePayoutSettings;
 use AIArmada\FilamentAffiliates\Pages\PayoutBatchPage;
+use AIArmada\FilamentAffiliates\Pages\PerformanceBonusesPage;
 use AIArmada\FilamentAffiliates\Pages\ReportsPage;
 use AIArmada\FilamentAffiliates\Resources\AffiliateCommissionTemplateResource;
 use AIArmada\FilamentAffiliates\Resources\AffiliateConversionResource;
@@ -22,6 +25,7 @@ use AIArmada\FilamentAffiliates\Resources\AffiliateSupportTicketResource;
 use AIArmada\FilamentAffiliates\Resources\AffiliateTaxDocumentResource;
 use AIArmada\FilamentAffiliates\Resources\AffiliateTouchpointResource;
 use AIArmada\FilamentAffiliates\Resources\AffiliateUplineResource;
+use AIArmada\FilamentAffiliates\Resources\AffiliateVolumeTierResource;
 use AIArmada\FilamentAffiliates\Widgets\AffiliateStatsWidget;
 use AIArmada\FilamentAffiliates\Widgets\FraudAlertWidget;
 use AIArmada\FilamentAffiliates\Widgets\PayoutQueueWidget;
@@ -86,6 +90,7 @@ final class FilamentAffiliatesPlugin implements Plugin
 
         if ($features['commission_management']) {
             $resources[] = AffiliateCommissionTemplateResource::class;
+            $resources[] = AffiliateVolumeTierResource::class;
         }
 
         if ($features['links']) {
@@ -137,6 +142,12 @@ final class FilamentAffiliatesPlugin implements Plugin
 
         if ($features['payouts']) {
             $pages[] = PayoutBatchPage::class;
+            $pages[] = ManageAffiliatePayoutSettings::class;
+            $pages[] = PerformanceBonusesPage::class;
+        }
+
+        if ($features['commission_management']) {
+            $pages[] = ManageAffiliateBonusSettings::class;
         }
 
         if ($features['reports']) {

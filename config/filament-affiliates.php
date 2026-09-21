@@ -96,6 +96,7 @@ return [
             'affiliate_rank_histories' => 71,
             'affiliate_support_tickets' => 72,
             'affiliate_tax_documents' => 73,
+            'affiliate_volume_tiers' => 74,
         ],
     ],
 
@@ -103,7 +104,10 @@ return [
         'navigation_sort' => [
             'reports' => 10,
             'commission_settings' => 5,
+            'bonus_settings' => 6,
             'payout_batch' => 12,
+            'payout_settings' => 13,
+            'performance_bonuses' => 14,
             'fraud_review' => 15,
         ],
     ],

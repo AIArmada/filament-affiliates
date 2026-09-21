@@ -13,6 +13,8 @@ use AIArmada\CommerceSupport\Support\FilamentPermission;
 use AIArmada\CommerceSupport\Support\MoneyFormatter;
 use AIArmada\CommerceSupport\Support\OwnerWriteGuard;
 use AIArmada\FilamentAffiliates\Actions\ProcessAffiliatePayout;
+use AIArmada\FilamentAffiliates\Actions\RunScheduledPayoutSweep;
+use AIArmada\FilamentAffiliates\Services\PayoutExportService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
@@ -61,6 +63,70 @@ final class PayoutBatchPage extends Page implements HasForms, HasTable
 
     /** @var view-string */
     protected string $view = 'filament-affiliates::pages.payout-batch';
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('export_settlement')
+                ->label('Export settlement CSV')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('gray')
+                ->form([
+                    Forms\Components\DatePicker::make('from')
+                        ->label('From')
+                        ->nullable(),
+                    Forms\Components\DatePicker::make('to')
+                        ->label('To')
+                        ->nullable(),
+                ])
+                ->action(fn (array $data) => app(PayoutExportService::class)->downloadSettlementCsv(
+                    $data['from'] ?? null,
+                    $data['to'] ?? null,
+                )),
+
+            Action::make('scheduled_sweep')
+                ->label('Scheduled sweep')
+                ->icon('heroicon-o-play')
+                ->color('warning')
+                ->authorize(fn (): bool => FilamentPermission::hasAnyAbility(['affiliate.payout', 'affiliates.payout.update']))
+                ->form([
+                    Forms\Components\Toggle::make('dry_run')
+                        ->label('Dry run (preview only)')
+                        ->default(true),
+
+                    Forms\Components\TextInput::make('affiliate_id')
+                        ->label('Affiliate ID (optional)')
+                        ->nullable(),
+
+                    Forms\Components\TextInput::make('min_amount')
+                        ->label('Minimum floor (minor units, optional)')
+                        ->numeric()
+                        ->minValue(0)
+                        ->nullable()
+                        ->helperText('Applied in each balance currency. Blank means any positive balance.'),
+                ])
+                ->requiresConfirmation()
+                ->modalHeading('Run scheduled payout sweep')
+                ->modalDescription('Atomically claims scheduled payouts for eligible balances in the current owner scope. Dry runs change nothing.')
+                ->action(function (array $data): void {
+                    $dryRun = (bool) ($data['dry_run'] ?? true);
+                    $minimum = isset($data['min_amount']) && $data['min_amount'] !== ''
+                        ? max(0, (int) $data['min_amount'])
+                        : 0;
+
+                    $summary = app(RunScheduledPayoutSweep::class)->handle(
+                        $dryRun,
+                        is_string($data['affiliate_id'] ?? null) ? $data['affiliate_id'] : null,
+                        $minimum,
+                    );
+
+                    Notification::make()
+                        ->title($dryRun ? 'Sweep dry run complete' : 'Scheduled sweep complete')
+                        ->body("Processed: {$summary['processed']}, Skipped: {$summary['skipped']}, Errors: {$summary['errors']}")
+                        ->send();
+                }),
+        ];
+    }
 
     public function table(Table $table): Table
     {
