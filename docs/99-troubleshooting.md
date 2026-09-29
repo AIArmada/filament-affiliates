@@ -235,16 +235,13 @@ public static function getEloquentQuery(): Builder
 2. Limit default records per page:
 
 ```php
-public static function table(Table $table): Table
-{
-    return $table->defaultPaginationPageOption(25);
-}
+protected static int $defaultPaginationPageOption = 25;
 ```
 
 3. Use table polling only when necessary:
 
 ```php
-protected ?string $pollingInterval = null; // Disable auto-refresh
+protected static ?string $pollingInterval = null; // Disable auto-refresh
 ```
 
 ### Memory Issues with Large Exports
@@ -256,7 +253,7 @@ protected ?string $pollingInterval = null; // Disable auto-refresh
 1. Use chunked exports:
 
 ```php
-Filament\Actions\ExportBulkAction::make()
+Tables\Actions\ExportBulkAction::make()
     ->chunkSize(1000);
 ```
 
